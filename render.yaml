@@ -2,13 +2,15 @@ services:
   - type: web
     name: face-recognition-backend
     env: python
-    buildCommand: "pip install -r requirements.txt"
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
     startCommand: "bash render_start.sh"
     plan: starter
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.18
+        value: 3.11.9
       - key: PORT
         value: 8000
       - key: PYTHONUNBUFFERED
+        value: 1
+      - key: PIP_DISABLE_PIP_VERSION_CHECK
         value: 1
