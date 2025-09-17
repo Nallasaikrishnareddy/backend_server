@@ -7,6 +7,7 @@ numpy
 requests
 tqdm
 tensorflow
+tf-keras
 opencv-python-headless
 scikit-learn
 pandas
