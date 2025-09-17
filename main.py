@@ -1,9 +1,13 @@
 # main.py
+import os
+# Force TensorFlow to use CPU only BEFORE any other imports
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-import os
 import traceback
 
 # Add error handling for imports

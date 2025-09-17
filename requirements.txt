@@ -6,7 +6,7 @@ Pillow
 numpy
 requests
 tqdm
-tensorflow
+tensorflow-cpu
 tf-keras
 opencv-python-headless
 scikit-learn
