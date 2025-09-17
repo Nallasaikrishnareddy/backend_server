@@ -17,9 +17,10 @@ export TF_CPP_MIN_VLOG_LEVEL=3
 # Pre-download models to avoid timeout during first request
 python -c "
 try:
-    from deepface import DeepFace
-    print('Pre-loading DeepFace models...')
-    DeepFace.build_model('ArcFace')
+    from insightface.app import FaceAnalysis
+    print('Pre-loading InsightFace models...')
+    app = FaceAnalysis(name='buffalo_l')
+    app.prepare(ctx_id=-1)
     print('Models loaded successfully')
 except Exception as e:
     print(f'Model pre-load failed: {e}')
