@@ -4,8 +4,16 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
-from embeddings import get_embedding_from_bytes, emb_to_bytes, bytes_to_emb
-from db import init_db, insert_face, find_best_match
+import traceback
+
+# Add error handling for imports
+try:
+    from embeddings import get_embedding_from_bytes, emb_to_bytes, bytes_to_emb
+    from db import init_db, insert_face, find_best_match
+    print("✅ All imports successful")
+except Exception as e:
+    print(f"❌ Import error: {e}")
+    print(traceback.format_exc())
 
 app = FastAPI(
     title="Face Recognition API",
@@ -13,28 +21,48 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS configuration for mobile/web access
+# CORS configuration - MORE PERMISSIVE FOR TESTING
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domains
+    allow_origins=["*"],  # Allow all origins for now
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize database on startup
-init_db()
+# Initialize database on startup with error handling
+try:
+    init_db()
+    print("✅ Database initialized successfully")
+except Exception as e:
+    print(f"❌ Database initialization failed: {e}")
 
 @app.get("/")
 async def root():
     """Health check endpoint"""
     return {
         "message": "Face Recognition API is running",
-        "status": "healthy",
+        "status": "healthy", 
         "endpoints": {
             "register": "POST /register",
             "verify": "POST /verify"
         }
+    }
+
+@app.get("/health")
+async def health():
+    """Detailed health check"""
+    try:
+        # Test database connection
+        init_db()
+        db_status = "✅ OK"
+    except Exception as e:
+        db_status = f"❌ Error: {str(e)}"
+    
+    return {
+        "status": "running",
+        "database": db_status,
+        "message": "Face Recognition Backend"
     }
 
 @app.post('/register')
