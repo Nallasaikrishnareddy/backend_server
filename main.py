@@ -10,14 +10,42 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import traceback
 
-# Add error handling for imports
-try:
-    from embeddings import get_embedding_from_bytes, emb_to_bytes, bytes_to_emb
-    from db import init_db, insert_face, find_best_match
-    print("✅ All imports successful")
-except Exception as e:
-    print(f"❌ Import error: {e}")
-    print(traceback.format_exc())
+# Add error handling for imports with lazy loading
+FACE_RECOGNITION_ENABLED = False
+get_embedding_from_bytes = None
+emb_to_bytes = None
+insert_face = None
+find_best_match = None
+init_db = None
+
+def lazy_load_face_recognition():
+    """Lazy load face recognition modules when first needed"""
+    global FACE_RECOGNITION_ENABLED, get_embedding_from_bytes, emb_to_bytes
+    global insert_face, find_best_match, init_db
+    
+    if FACE_RECOGNITION_ENABLED:
+        return True
+        
+    try:
+        from embeddings import get_embedding_from_bytes as _get_emb, emb_to_bytes as _emb_to_bytes
+        from db import init_db as _init_db, insert_face as _insert_face, find_best_match as _find_best_match
+        
+        get_embedding_from_bytes = _get_emb
+        emb_to_bytes = _emb_to_bytes
+        insert_face = _insert_face
+        find_best_match = _find_best_match
+        init_db = _init_db
+        
+        # Initialize DB
+        init_db()
+        
+        FACE_RECOGNITION_ENABLED = True
+        print("✅ Face recognition modules loaded successfully")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Failed to load face recognition: {e}")
+        return False
 
 app = FastAPI(
     title="Face Recognition API",
@@ -35,11 +63,8 @@ app.add_middleware(
 )
 
 # Initialize database on startup with error handling
-try:
-    init_db()
-    print("✅ Database initialized successfully")
-except Exception as e:
-    print(f"❌ Database initialization failed: {e}")
+# Don't initialize immediately - do it lazily
+print("✅ Backend starting - face recognition will load on first use")
 
 @app.get("/")
 async def root():
@@ -73,6 +98,10 @@ async def health():
 async def register(name: str = Form(...), file: UploadFile = File(...)):
     """Register a new face with name and image"""
     try:
+        # Lazy load face recognition
+        if not lazy_load_face_recognition():
+            raise HTTPException(status_code=503, detail="Face recognition service unavailable")
+            
         # Validate file type
         if not file.content_type or not file.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="File must be an image")
@@ -103,6 +132,10 @@ async def register(name: str = Form(...), file: UploadFile = File(...)):
 async def verify(file: UploadFile = File(...)):
     """Verify a face against registered faces"""
     try:
+        # Lazy load face recognition
+        if not lazy_load_face_recognition():
+            raise HTTPException(status_code=503, detail="Face recognition service unavailable")
+            
         # Validate file type
         if not file.content_type or not file.content_type.startswith('image/'):
             raise HTTPException(status_code=400, detail="File must be an image")
@@ -140,7 +173,7 @@ async def verify(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
 
-# # For Render deployment
-# if __name__ == '__main__':
-#     port = int(os.environ.get('PORT', 8000))
-#     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+# For Render deployment
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
