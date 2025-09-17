@@ -8,7 +8,7 @@ import os
 
 # -------------------- Lazy model holder --------------------
 _deepface_model = None
-_deepface_backend_name = "ArcFace"  # You can switch to "MobileFaceNet" if memory is tight
+_deepface_backend_name = "MobileFaceNet"  # Switched from ArcFace to MobileFaceNet for low memory usage
 
 def _get_model():
     """
@@ -19,17 +19,17 @@ def _get_model():
     if _deepface_model is None:
         try:
             from deepface import DeepFace
-            print("[INFO] Loading DeepFace model on-demand...")
+            print("[INFO] Loading MobileFaceNet model on-demand...")
             _deepface_model = DeepFace.build_model(_deepface_backend_name)
-            print("[INFO] DeepFace model loaded successfully")
+            print("[INFO] MobileFaceNet model loaded successfully")
         except Exception as e:
-            raise RuntimeError("Failed to load DeepFace model") from e
+            raise RuntimeError("Failed to load MobileFaceNet model") from e
     return _deepface_model
 
 # -------------------- Embedding functions --------------------
 def get_embedding_from_bytes(image_bytes: bytes) -> np.ndarray:
     """
-    Convert image bytes to a normalized embedding (float32) using DeepFace.
+    Convert image bytes to a normalized embedding (float32) using MobileFaceNet.
     Optimized for cloud deployment (on-demand model + temp files fallback).
     """
     from deepface import DeepFace
