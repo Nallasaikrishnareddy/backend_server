@@ -1,108 +1,62 @@
 # main.py
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
-import traceback
-import logging
-import sys
+from embeddings import get_embedding_from_bytes, emb_to_bytes, bytes_to_emb
+from db import init_db, insert_face, find_best_match
 
-# -------------------- Logging Setup --------------------
-logging.basicConfig(
-    level=logging.DEBUG,  # Show debug/info/warning/error
-    format='[%(asctime)s] [%(levelname)s] %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
-)
-logger = logging.getLogger(__name__)
-
-# -------------------- Imports --------------------
-try:
-    from embeddings import get_embedding_from_bytes, emb_to_bytes, bytes_to_emb
-    from db import init_db, insert_face, find_best_match
-    logger.info("✅ All imports successful")
-except Exception as e:
-    logger.exception(f"❌ Import error: {e}")
-
-# -------------------- App Setup --------------------
 app = FastAPI(
     title="Face Recognition API",
     description="Face registration and verification system",
     version="1.0.0"
 )
 
-# CORS configuration - MORE PERMISSIVE FOR TESTING
+# CORS configuration for mobile/web access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for now
+    allow_origins=["*"],  # In production, specify your frontend domains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# -------------------- Database Init --------------------
-try:
-    init_db()
-    logger.info("✅ Database initialized successfully")
-except Exception as e:
-    logger.exception(f"❌ Database initialization failed: {e}")
+# Initialize database on startup
+init_db()
 
-# -------------------- Middleware to log requests --------------------
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    logger.info(f"Incoming request: {request.method} {request.url}")
-    response = await call_next(request)
-    logger.info(f"Response status: {response.status_code}")
-    return response
-
-# -------------------- Health Endpoints --------------------
 @app.get("/")
 async def root():
-    logger.debug("Health check endpoint called")
+    """Health check endpoint"""
     return {
         "message": "Face Recognition API is running",
-        "status": "healthy", 
+        "status": "healthy",
         "endpoints": {
             "register": "POST /register",
             "verify": "POST /verify"
         }
     }
 
-@app.get("/health")
-async def health():
-    try:
-        init_db()
-        db_status = "✅ OK"
-    except Exception as e:
-        db_status = f"❌ Error: {str(e)}"
-    logger.debug(f"Health check: database status: {db_status}")
-    return {
-        "status": "running",
-        "database": db_status,
-        "message": "Face Recognition Backend"
-    }
-
-# -------------------- Register Endpoint --------------------
 @app.post('/register')
 async def register(name: str = Form(...), file: UploadFile = File(...)):
-    logger.info(f"Register request received for name: {name}")
+    """Register a new face with name and image"""
     try:
+        # Validate file type
         if not file.content_type or not file.content_type.startswith('image/'):
-            logger.warning(f"Invalid file type: {file.content_type}")
             raise HTTPException(status_code=400, detail="File must be an image")
         
+        # Read image bytes
         image_bytes = await file.read()
-        logger.debug(f"Received image bytes: {len(image_bytes)}")
+        
         if len(image_bytes) == 0:
-            logger.warning("Empty image file received")
             raise HTTPException(status_code=400, detail="Empty image file")
         
-        emb = get_embedding_from_bytes(image_bytes)
-        logger.debug(f"Embedding generated: shape={emb.shape}, dtype={emb.dtype}")
+        # Get embedding
+        emb = get_embedding_from_bytes(image_bytes)  # numpy array float32
         emb_blob = emb_to_bytes(emb)
         
+        # Store in database
         row_id = insert_face(name, emb_blob, image_bytes)
-        logger.info(f"Face registered successfully for {name}, row_id={row_id}")
         
         return JSONResponse({
             'status': 'success', 
@@ -111,29 +65,29 @@ async def register(name: str = Form(...), file: UploadFile = File(...)):
         })
         
     except Exception as e:
-        logger.exception(f"Registration failed for {name}")
         raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
 
-# -------------------- Verify Endpoint --------------------
 @app.post('/verify')
 async def verify(file: UploadFile = File(...)):
-    logger.info("Verify request received")
+    """Verify a face against registered faces"""
     try:
+        # Validate file type
         if not file.content_type or not file.content_type.startswith('image/'):
-            logger.warning(f"Invalid file type: {file.content_type}")
             raise HTTPException(status_code=400, detail="File must be an image")
         
+        # Read image bytes
         image_bytes = await file.read()
-        logger.debug(f"Received image bytes: {len(image_bytes)}")
+        
         if len(image_bytes) == 0:
-            logger.warning("Empty image file received")
             raise HTTPException(status_code=400, detail="Empty image file")
         
+        # Get embedding
         emb = get_embedding_from_bytes(image_bytes)
+        
+        # Find match
         match = find_best_match(emb)
         
         if match:
-            logger.info(f"Match found: {match['name']} (id={match['id']})")
             return JSONResponse({
                 'status': 'success',
                 'match_found': True,
@@ -144,7 +98,6 @@ async def verify(file: UploadFile = File(...)):
                 }
             })
         else:
-            logger.info("No matching face found")
             return JSONResponse({
                 'status': 'success',
                 'match_found': False,
@@ -153,10 +106,9 @@ async def verify(file: UploadFile = File(...)):
             })
             
     except Exception as e:
-        logger.exception("Verification failed")
         raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
 
-# -------------------- Render Deployment --------------------
+# For Render deployment
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)

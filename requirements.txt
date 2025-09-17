@@ -6,13 +6,9 @@ Pillow
 numpy
 requests
 tqdm
-tensorflow-cpu
-tf-keras
 opencv-python-headless
 scikit-learn
 pandas
-deepface
-gdown
-retina-face
-fire
 sqlalchemy
+insightface
+onnxruntime
