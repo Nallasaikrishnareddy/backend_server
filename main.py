@@ -140,7 +140,7 @@ async def verify(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
 
-# For Render deployment
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+# # For Render deployment
+# if __name__ == '__main__':
+#     port = int(os.environ.get('PORT', 8000))
+#     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)

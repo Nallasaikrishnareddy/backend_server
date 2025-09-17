@@ -8,8 +8,8 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
-      - key: PORT
-        value: 8000
+      # - key: PORT
+      #   value: 8000
       - key: PYTHONUNBUFFERED
         value: 1
       - key: PIP_DISABLE_PIP_VERSION_CHECK
