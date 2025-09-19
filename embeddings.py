@@ -2,9 +2,9 @@ import io
 import zlib
 import numpy as np
 from PIL import Image
-import tempfile
-import os
+from insightface.app import FaceAnalysis
 
+<<<<<<< HEAD
 _deepface_model = None
 _deepface_backend_name = "ArcFace"  
 
@@ -60,9 +60,48 @@ def get_embedding_from_bytes(image_bytes: bytes) -> np.ndarray:
         emb = np.array(rep["embedding"], dtype=np.float32) # type: ignore
     if emb is None:
         raise RuntimeError("DeepFace did not return an embedding.")
+=======
+# Lazy model holder
+_insightface_app = None
+
+
+def _get_app():
+    """
+    Initialize InsightFace ArcFace model (buffalo_l).
+    Uses ONNXRuntime backend (lightweight, CPU-friendly).
+    """
+    global _insightface_app
+    if _insightface_app is None:
+        print("[INFO] Loading InsightFace model (buffalo_l)...")
+        app = FaceAnalysis(name="buffalo_l")
+        app.prepare(ctx_id=-1)  # CPU mode (works on Render free tier)
+        _insightface_app = app
+        print("[INFO] InsightFace model loaded successfully.")
+    return _insightface_app
+
+
+def get_embedding_from_bytes(image_bytes: bytes) -> np.ndarray:
+    """
+    Convert image bytes to a normalized ArcFace embedding (float32) using InsightFace.
+    """
+    app = _get_app()
+
+    # Load image
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    img_np = np.array(img)
+
+    # Detect and get embeddings
+    faces = app.get(img_np)
+    if len(faces) == 0:
+        raise RuntimeError("No face detected in the image.")
+
+    emb = faces[0].embedding.astype(np.float32)
+
+    # Normalize
+>>>>>>> 22bfe60b364efab8be0cca57e6879841388ad26c
     norm = np.linalg.norm(emb)
     if norm == 0:
-        raise RuntimeError("Zero-norm embedding from DeepFace.")
+        raise RuntimeError("Zero-norm embedding from InsightFace.")
     return (emb / norm).astype(np.float32)
 
 
