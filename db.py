@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 from typing import Optional
-from .embeddings import bytes_to_emb
+from embeddings import bytes_to_emb
 import numpy as np
 
 DB = 'faces.db'

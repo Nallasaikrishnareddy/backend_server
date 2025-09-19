@@ -1,11 +1,14 @@
 # main.py
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException , Body
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import os
+import base64
 from embeddings import get_embedding_from_bytes, emb_to_bytes, bytes_to_emb
 from db import init_db, insert_face, find_best_match
+from pydantic import BaseModel
+
 
 app = FastAPI(
     title="Face Recognition API",
@@ -13,17 +16,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS configuration for mobile/web access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domains
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize database on startup
 init_db()
+
+class RegisterPayload(BaseModel):
+    name: str
+    image: str
+
+class VerifyPayload(BaseModel):
+    image_base64: str
 
 @app.get("/")
 async def root():
@@ -38,55 +46,37 @@ async def root():
     }
 
 @app.post('/register')
-async def register(name: str = Form(...), file: UploadFile = File(...)):
-    """Register a new face with name and image"""
+async def register(payload: RegisterPayload = Body(...)):
     try:
-        # Validate file type
-        if not file.content_type or not file.content_type.startswith('image/'):
-            raise HTTPException(status_code=400, detail="File must be an image")
-        
-        # Read image bytes
-        image_bytes = await file.read()
-        
+        try:
+            image_bytes = base64.b64decode(payload.image)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid base64 image")
         if len(image_bytes) == 0:
-            raise HTTPException(status_code=400, detail="Empty image file")
-        
-        # Get embedding
-        emb = get_embedding_from_bytes(image_bytes)  # numpy array float32
+            raise HTTPException(status_code=400, detail="Empty image data")
+        emb = get_embedding_from_bytes(image_bytes)
         emb_blob = emb_to_bytes(emb)
-        
-        # Store in database
-        row_id = insert_face(name, emb_blob, image_bytes)
-        
+        row_id = insert_face(payload.name, emb_blob, image_bytes)
         return JSONResponse({
-            'status': 'success', 
-            'message': f'Face registered successfully for {name}',
+            'status': 'success',
+            'message': f'Face registered successfully for {payload.name}',
             'id': row_id
         })
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
 
 @app.post('/verify')
-async def verify(file: UploadFile = File(...)):
-    """Verify a face against registered faces"""
+async def verify(payload: VerifyPayload = Body(...) ):
     try:
-        # Validate file type
-        if not file.content_type or not file.content_type.startswith('image/'):
-            raise HTTPException(status_code=400, detail="File must be an image")
-        
-        # Read image bytes
-        image_bytes = await file.read()
-        
+        image_bytes = base64.b64decode(payload.image_base64)
         if len(image_bytes) == 0:
-            raise HTTPException(status_code=400, detail="Empty image file")
-        
-        # Get embedding
+            raise HTTPException(status_code=400, detail="Empty image data")
         emb = get_embedding_from_bytes(image_bytes)
-        
-        # Find match
         match = find_best_match(emb)
-        
+
         if match:
             return JSONResponse({
                 'status': 'success',
@@ -104,7 +94,8 @@ async def verify(file: UploadFile = File(...)):
                 'match': None,
                 'message': 'No matching face found'
             })
-            
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
 
