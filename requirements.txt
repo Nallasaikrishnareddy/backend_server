@@ -12,3 +12,4 @@ pandas
 sqlalchemy
 insightface
 onnxruntime
+deepface
