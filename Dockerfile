@@ -3,7 +3,7 @@ FROM python:3.11-slim
 
 # Install system libraries for OpenCV / face recognition
 RUN apt-get update && \
-    apt-get install -y libgl1 libglib2.0-0 && \
+    apt-get install -y libgl1 libglib2.0-0 libsm6 libxext6 && \
     rm -rf /var/lib/apt/lists/*
 
 # Set working directory

@@ -13,3 +13,5 @@ sqlalchemy
 insightface
 onnxruntime
 deepface
+tensorflow==2.20.0
+tf-keras
