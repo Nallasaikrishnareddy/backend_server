@@ -2,7 +2,7 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 # More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python app to Azure Web App - face-reg
+name: Build and deploy Python app to Azure Web App - face-recg
 
 on:
   push:
@@ -58,14 +58,14 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_FF56A81D86264FB390DD66781788CE08 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_85BE9F3303D4450F9A0BF0AB92CB95D1 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_4F356318E4E747D9B1305A45F81FDDBE }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1073262452ED4B539A37DDF771F19017 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_D2F070B4CA7744A587C9CEB852DD58DF }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_14416F49B482428BA14CC2DB90F46A71 }}
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'face-reg'
+          app-name: 'face-recg'
           slot-name: 'Production'
           
